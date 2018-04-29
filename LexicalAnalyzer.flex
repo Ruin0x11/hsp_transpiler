@@ -13,58 +13,131 @@ import java.io.*;
 	public Yylex(Reader r, Parser yyparser){
 		this(r);
 		this.yyparser = yyparser;
-	}	
+	}
+                private void count() {
+                System.out.println("Get:" + yyline + ":" + yycolumn + " { " + yytext() + " } {" + yystate() + "}");
+        }
+        private void comment() {}
+        public int check_type() { return Parser.IDENTIFIER; }
 
 %}
 
 NL = \n | \r | \r\n
+WS = [ \t\v\f]
+
+D=[0-9]
+L=[a-zA-Z_]
+H=[a-fA-F0-9]
+E=[Ee][+-]?{D}+
+FS=(f|F|l|L)
+IS=(u|U|l|L)*
+Comment   =";".*{NL}
+
 
 %%
-"classe"	{ return Parser.CLASS; }
-"subclasse" { return Parser.SUBCLASS;}
-"funcao_principal" { return Parser.MAIN;}
-\/\/.*$ { 	yyparser.yylval = new ParserVal(yytext());
-			return Parser.COMMENT_LINE;}
-"{"			{return Parser.OPEN_KEYS;}
-"}"			{return Parser.CLOSE_KEYS;}
-"inteiro"	{return Parser.INTEGER;}
-"String" 	{return Parser.STRING;}
-","			{ return Parser.COMMA;}
-"vetor"		{return Parser.ARRAY;}
-"[" { return Parser.OPEN_BRACKET;}
-"]" { return Parser.CLOSE_BRACKET;}
-"real" { return Parser.FLOAT;}
-"(" { return Parser.OPEN_PARENTHESES;}
-")" { return Parser.CLOSE_PARENTHESES;}
-"se" {return Parser.IF;}
-"="	{return Parser.EQUALS;}
-"!=" {return Parser.NOT_EQUALS;}
-">"	{return Parser.GREATER;}
-"<"	{return Parser.LESS;}
-">=" { return Parser.GREATER_EQUALS;}
-"<=" { return Parser.LESS_EQUALS;}
-"<-"  {return Parser.ATRIBUITION;}
-"+"	{return Parser.PLUS;}
-"-"	{return Parser.MINUS;}
-"/"	{return Parser.DIVISION;}
-"*" { return Parser.MULTIPLICATION;}
-"enquanto" { return Parser.WHILE;}
-"senao" { return Parser.ELSE;}
-"escrever" { return Parser.PRINT;}
-"_"  {return Parser.RETURN;}
-[.]	{return Parser.DOT;}
-"nulo" {return Parser.NULL;}
-"para" { return Parser.FOR;}
-"ate" { return Parser.UNTIL;}
-"passo" { return Parser.PASS;}
-"length" { return Parser.LENGTH;}
-"trim" 	 { return Parser.TRIM;}
-\".*\" {yyparser.yylval = new ParserVal(yytext());
-			return Parser.STRING_TO_PRINT;}
-[a-zA-Z][a-zA-Z0-9_]*	{ 
-		yyparser.yylval = new ParserVal(yytext());
-		return Parser.IDENTIFIER;
-	}
-[-]?[0-9]+(\.[0-9]+)? { yyparser.yylval = new ParserVal(yytext());
-		return Parser.NUMBER;}
-{NL}|" "|\t  {}
+
+{Comment}			{  }
+
+"auto"			{ count(); return Parser.AUTO; }
+"break"			{ count(); return Parser.BREAK; }
+"char"			{ count(); return Parser.CHAR; }
+"const"			{ count(); return Parser.CONST; }
+"continue"		{ count(); return Parser.CONTINUE; }
+"do"			{ count(); return Parser.DO; }
+"double"		{ count(); return Parser.DOUBLE; }
+"else"			{ count(); return Parser.ELSE; }
+"enum"			{ count(); return Parser.ENUM; }
+"extern"		{ count(); return Parser.EXTERN; }
+"float"			{ count(); return Parser.FLOAT; }
+"for"			{ count(); return Parser.FOR; }
+"goto"			{ count(); return Parser.GOTO; }
+"gosub"			{ count(); return Parser.GOSUB; }
+"if"			{ count(); return Parser.IF; }
+"int"			{ count(); return Parser.INT; }
+"long"			{ count(); return Parser.LONG; }
+"register"		{ count(); return Parser.REGISTER; }
+"return"		{ count(); return Parser.RETURN; }
+"short"			{ count(); return Parser.SHORT; }
+"signed"		{ count(); return Parser.SIGNED; }
+"sizeof"		{ count(); return Parser.SIZEOF; }
+"static"		{ count(); return Parser.STATIC; }
+"struct"		{ count(); return Parser.STRUCT; }
+"typedef"		{ count(); return Parser.TYPEDEF; }
+"union"			{ count(); return Parser.UNION; }
+"unsigned"		{ count(); return Parser.UNSIGNED; }
+"void"			{ count(); return Parser.VOID; }
+"volatile"		{ count(); return Parser.VOLATILE; }
+
+"var"     { count(); return Parser.VAR; }
+"str"     { count(); return Parser.STR; }
+"sptr"    { count(); return Parser.SPTR; }
+"pval"    { count(); return Parser.PVAL; }
+"bmscr"   { count(); return Parser.BMSCR; }
+"prefstr" { count(); return Parser.PREFSTR; }
+"pexinfo" { count(); return Parser.PEXINFO; }
+"nullptr" { count(); return Parser.NULLPTR; }
+"array"   { count(); return Parser.ARRAY; }
+
+{L}({L}|{D})*		{ count(); return Parser.IDENTIFIER; }
+
+0[xX]{H}+{IS}?		{ count(); return Parser.CONSTANT; }
+0{D}+{IS}?		{ count(); return Parser.CONSTANT; }
+{D}+{IS}?		{ count(); return Parser.CONSTANT; }
+L?'(\\.|[^\\'])+'	{ count(); return Parser.CONSTANT; }
+
+{D}+{E}{FS}?		{ count(); return Parser.CONSTANT; }
+{D}*"."{D}+({E})?{FS}?	{ count(); return Parser.CONSTANT; }
+{D}+"."{D}*({E})?{FS}?	{ count(); return Parser.CONSTANT; }
+
+L?\"(\\.|[^\\\"])*\"	{ count(); return Parser.STRING_LITERAL; }
+
+"..."			{ count(); return Parser.ELLIPSIS; }
+">>="			{ count(); return Parser.RIGHT_ASSIGN; }
+"<<="			{ count(); return Parser.LEFT_ASSIGN; }
+"+="			{ count(); return Parser.ADD_ASSIGN; }
+"-="			{ count(); return Parser.SUB_ASSIGN; }
+"*="			{ count(); return Parser.MUL_ASSIGN; }
+"/="			{ count(); return Parser.DIV_ASSIGN; }
+"%="			{ count(); return Parser.MOD_ASSIGN; }
+"&="			{ count(); return Parser.AND_ASSIGN; }
+"^="			{ count(); return Parser.XOR_ASSIGN; }
+"|="			{ count(); return Parser.OR_ASSIGN; }
+">>"			{ count(); return Parser.RIGHT_OP; }
+"<<"			{ count(); return Parser.LEFT_OP; }
+"++"			{ count(); return Parser.INC_OP; }
+"--"			{ count(); return Parser.DEC_OP; }
+"->"			{ count(); return Parser.PTR_OP; }
+"&&"			{ count(); return Parser.AND_OP; }
+"||"			{ count(); return Parser.OR_OP; }
+"<="			{ count(); return Parser.LE_OP; }
+">="			{ count(); return Parser.GE_OP; }
+"=="			{ count(); return Parser.EQ_OP; }
+"!="			{ count(); return Parser.NE_OP; }
+("{"|"<%")		{ count(); return (int) '{'; }
+("}"|"%>")		{ count(); return (int) '}'; }
+","			{ count(); return (int) ','; }
+":"			{ count(); return (int) ':'; }
+"="			{ count(); return (int) '='; }
+"("			{ count(); return (int) '('; }
+")"			{ count(); return (int) ')'; }
+("["|"<:")		{ count(); return (int) '['; }
+("]"|":>")		{ count(); return (int) ']'; }
+"."			{ count(); return (int) '.'; }
+"&"			{ count(); return Parser.OR_OP; }
+"!"			{ count(); return (int) '!'; }
+"~"			{ count(); return (int) '~'; }
+"-"			{ count(); return (int) '-'; }
+"+"			{ count(); return (int) '+'; }
+"*"			{ count(); return (int) '*'; }
+"/"			{ count(); return (int) '/'; }
+"%"			{ count(); return (int) '%'; }
+"<"			{ count(); return (int) '<'; }
+">"			{ count(); return (int) '>'; }
+"^"			{ count(); return (int) '^'; }
+"|"			{ count(); return Parser.AND_OP; }
+"?"			{ count(); return (int) '?'; }
+"#"			{ count(); return (int) '#'; }
+
+{NL}                    { count(); return Parser.NEWLINE; }
+{WS}                    { count(); }
+.			{ /* ignore bad characters */ }

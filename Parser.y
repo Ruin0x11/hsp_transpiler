@@ -6,211 +6,455 @@
 
 
 /* BYACC Declarations */
-%token CLASS
-%token SUBCLASS
-%token <sval> IDENTIFIER
-%token OPEN_KEYS
-%token CLOSE_KEYS
-%token INTEGER
-%token STRING
-%token COMMA
-%token ARRAY
-%token FLOAT
-%token IF
-%token WHILE
-%token OPEN_BRACKET
-%token CLOSE_BRACKET
-%token OPEN_PARENTHESES
-%token CLOSE_PARENTHESES
-%token EQUALS
-%token NOT_EQUALS
-%token GREATER
-%token LESS
-%token GREATER_EQUALS
-%token LESS_EQUALS
-%token ATRIBUITION
-%token PLUS
-%token MINUS
-%token DIVISION
-%token MULTIPLICATION
-%token RETURN
-%token ELSE
-%token NULL
-%token PRINT
-%token FOR
-%token UNTIL
-%token PASS
-%token MAIN
-%token DOT
-%token LENGTH
-%token TRIM
-%token <sval> NUMBER
-%token <sval> COMMENT_LINE
-%token <sval> STRING_TO_PRINT
-%type <sval> root
-%type <sval> classe
-%type <sval> comment
-%type <sval> commands
-%type <sval> declarations
-%type <sval> params
-%type <sval> function_commands
-%type <sval> function
-%type <sval> condition
-%type <sval> operand
-%type <sval> operator
-%type <sval> operation
-%type <sval> atribuition
-%type <sval> function_variables
-%type <sval> math_operator
-%type <sval> for_operation
-%type <sval> subclass
-%type <sval> methods
-%type <sval> return_statement
-%type <sval> expression
-%type <sval> complex_condition
-%type <sval> concat
+%token IDENTIFIER CONSTANT STRING_LITERAL SIZEOF
+%token PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
+%token AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
+%token SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
+%token XOR_ASSIGN OR_ASSIGN TYPE_NAME
 
+%token TYPEDEF EXTERN STATIC AUTO REGISTER
+%token CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID
+%token STRUCT UNION ENUM ELLIPSIS
+
+%token VAR PVAL BMSCR PREFSTR PEXINFO NULLPTR STR SPTR ARRAY GOSUB
+
+%token CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
+
+%token NEWLINE
+
+%nonassoc LOWER_THAN_ELSE
+%nonassoc ELSE
+
+%start hsp_source
 %%
-// ROOT
-program : root { System.out.println($1); }
-	     ;
 
-root : comment root { $$ = $1 + "\n" + $2; }
-	 | classe root	   { $$ = $1 + $2; }
-	 | subclass root 	{ $$ = $1 + $2;}
-	 |					{ $$ = ""; }
-		
+hsp_source
+        : chunk
+        | hsp_source chunk
+        ;
 
-// CLASS 
-classe : CLASS IDENTIFIER OPEN_KEYS commands CLOSE_KEYS { $$ = "\nclass " + $2 + " {"+ $4 + "\n }"; }
+chunk
+        : statement { System.out.println("ENDSTATEMENT"); }
+        | NEWLINE
+        |
+        ;
 
-// SUBCLASS
-subclass : SUBCLASS IDENTIFIER OPEN_KEYS commands CLOSE_KEYS { $$ = "\nprivate class " + $2 + " {" + $4 + "\n }";}
-		 | SUBCLASS IDENTIFIER OPEN_KEYS IDENTIFIER CLOSE_KEYS OPEN_KEYS commands CLOSE_KEYS { $$ = "\nprivate class " + $2 + " extends " + $4 + " { " + $7 + "\n }";}
+macro
+        : '#' IDENTIFIER args { System.out.println("MACRO"); }
+        | '#' IDENTIFIER
+        ;
 
-// COMMENTS
-comment : COMMENT_LINE	{ $$ = $1; }
+args
+        : primary_expression args
+        | primary_expression
+        ;
 
-//COMMANDS
-commands : MAIN OPEN_KEYS function_commands CLOSE_KEYS commands { $$ = "\npublic static void main (String[] args) {\n" + $3 + "\n}" + $5;}
-		 | declarations commands { $$ = $1 + ";" + $2 ;}
-		 | function commands { $$ = $1 + $2;}
-		 | comment commands { $$ = "\n" + $1 + $2;}
-		 | {$$ = "";}
+lis
+        : type_specifier IDENTIFIER ',' lis
+        | type_specifier ',' lis
+        | type_specifier IDENTIFIER
+        | type_specifier
+        ;
 
-// DECLARATIONS ONLY FOR OUT OF METHODS/
-declarations : INTEGER IDENTIFIER declarations { $$ = "\nint " + $2 + $3;}
-			 | IDENTIFIER IDENTIFIER declarations { $$ = "\n" + $1 + " " +  $2 + "= new " + $1 + "()";}
- 			 | ARRAY INTEGER IDENTIFIER OPEN_BRACKET NUMBER CLOSE_BRACKET declarations { $$ = "\nint[] " + $3 + " = new int[" + $5 + "]" + $7;}
- 			 | FLOAT IDENTIFIER declarations { $$ = "\nfloat " + $2 + $3;}
- 			 | IDENTIFIER declarations { $$ = $1 + ";" + $2;}
- 			 | STRING IDENTIFIER declarations { $$ = "\nString " + $2 + $3;}
- 			 | COMMA declarations { $$ = "," + $2;}
- 			 | { $$ = "";}
+// from c
 
-// PARAMS FOR FUNCTIONS
-params : INTEGER IDENTIFIER params { $$ = "int " + $2 + $3;}
-	   | FLOAT IDENTIFIER params { $$ = "float " + $2 + $3;}
-	   | COMMA params { $$ = "," + $2;}
-	   | IDENTIFIER params { $$ = $1 + $2;}
-	   | {$$ = "";}
+statement
+	: labeled_statement NEWLINE
+	| compound_statement NEWLINE
+	| expression_statement NEWLINE
+	| selection_statement // newline exceptional case
+	| iteration_statement NEWLINE
+	| jump_statement NEWLINE
+        | macro NEWLINE
+	;
 
-// FUNCTION DECLARATIONS
-function : INTEGER IDENTIFIER OPEN_PARENTHESES params CLOSE_PARENTHESES OPEN_KEYS function_commands CLOSE_KEYS { $$ = "\nint " + $2 + "(" + $4 + ") { \n" + $7 + "\n}";}
-		 | FLOAT IDENTIFIER OPEN_PARENTHESES params CLOSE_PARENTHESES OPEN_KEYS function_commands CLOSE_KEYS { $$ = "\nfloat " + $2 + "(" + $4 + ") { \n" + $7 + "\n}";}
-		 | NULL IDENTIFIER OPEN_PARENTHESES params CLOSE_PARENTHESES OPEN_KEYS function_commands CLOSE_KEYS { $$ = "\nvoid " + $2 + "(" + $4 + ") { \n" + $7 + "\n}";}
+primary_expression
+	: lis
+        | IDENTIFIER
+	| CONSTANT
+	| STRING_LITERAL
+        | SWITCH // it's more like a function here
+        | CASE
+        | WHILE // while(LoopCount < 20)
+	| '(' expression ')'
+	;
 
-// FUNCTIONS COMMANDS 
-function_commands : function_variables function_commands { $$ = $1 + ";" + $2;} 
-				  | atribuition function_commands { $$ = $1 + "\n" + $2;}
-				  | comment function_commands { $$ = "\n" + $1 + $2;}
-				  | IF OPEN_PARENTHESES condition CLOSE_PARENTHESES OPEN_KEYS function_commands CLOSE_KEYS function_commands { $$ = "\nif (" + $3 + ") {\n " + $6 + "\n}" + $8;}
-				  | IF OPEN_PARENTHESES condition CLOSE_PARENTHESES OPEN_KEYS function_commands CLOSE_KEYS ELSE OPEN_KEYS function_commands CLOSE_KEYS function_commands { $$ = "\nif (" + $3 + ") {\n " + $6 + "\n}\n else {\n" + $10 + "\n}" + $12;}
-				  | WHILE OPEN_PARENTHESES condition CLOSE_PARENTHESES OPEN_KEYS function_commands CLOSE_KEYS function_commands { $$ = "\nwhile (" + $3 + ") {\n " + $6 + "\n}" + $8;}
-				  | FOR OPEN_PARENTHESES IDENTIFIER ATRIBUITION NUMBER UNTIL condition PASS for_operation CLOSE_PARENTHESES OPEN_KEYS function_commands CLOSE_KEYS function_commands{$$ = "\nfor(int "+ $3 + "=" + $5 + ";" + $7 + ";" + $9 + ") {\n" + $12 + "\n}" + $14;}
-				  | operation function_commands { $$ = $1 + $2;}
-				  | methods function_commands { $$ = $1 + $2;}
-				  | PRINT OPEN_PARENTHESES STRING_TO_PRINT CLOSE_PARENTHESES function_commands { $$ = "\nSystem.out.print(" + $3 + ");" + $5;}
-				  | PRINT OPEN_PARENTHESES IDENTIFIER CLOSE_PARENTHESES function_commands { $$ = "\nSystem.out.print(" + $3 + ");" + $5;}
-				  | PRINT OPEN_PARENTHESES concat CLOSE_PARENTHESES function_commands { $$ = "\nSystem.out.print(" + $3 + ");" + $5;}
-				  | return_statement function_commands { $$ = $1 + $2;}
-				  | {$$ = "";}
+postfix_expression
+	: primary_expression
+	| postfix_expression '[' expression ']'
+	| postfix_expression '(' ')'
+	| postfix_expression     argument_expression_list
+	| postfix_expression '(' argument_expression_list ')'
+	| postfix_expression '.' IDENTIFIER
+	| postfix_expression PTR_OP STRING_LITERAL args //var_512->"Navigate" var_1102
+        | postfix_expression jump_statement
+	| postfix_expression INC_OP
+	| postfix_expression DEC_OP
+	;
 
-//CONCAT STRING TO PRINT
-concat : STRING_TO_PRINT PLUS concat { $$ = $1 + " + " + $3;}
-	   | operand PLUS concat { $$ = $1 + " + " + $3;}
-	   | operand { $$ = $1;}
-	   | STRING_TO_PRINT { $$ = $1;}
+argument_expression_list
+	: assignment_expression
+	| argument_expression_list ',' assignment_expression
+        | argument_expression_list ',' // gmode 6, , , 80
+	;
 
-//RETURN
-return_statement :  RETURN operand { $$ = "\nreturn " + $2 +  ";";}
-				 | RETURN { $$ = "\nreturn;";}
+unary_expression
+	: postfix_expression
+	| unary_operator cast_expression
+	| SIZEOF unary_expression
+	| SIZEOF '(' type_name ')'
+	;
 
-// VARIABLES FOR A INSIDE FUNCTIONS 
-function_variables : INTEGER IDENTIFIER  { $$ = "\nint "  + $2;}
-			 	   | IDENTIFIER IDENTIFIER { $$ = "\n" + $1 + " " +  $2 + "= new " + $1 + "()";}
-	 			   | ARRAY INTEGER IDENTIFIER OPEN_BRACKET NUMBER CLOSE_BRACKET  { $$ = "\nint[] " + $3 + " = new int[" + $5 + "]";}
-	 			   | FLOAT IDENTIFIER  { $$ = "\nfloat " + $2;}
-	 			   | IDENTIFIER  { $$ = $1;}
-	 			   | STRING IDENTIFIER  { $$ = "\nString " + $2;}
-	 			   | COMMA  { $$ = ",";}
+unary_operator
+	: '&'
+	| '*'
+	| '+'
+	| '-'
+	| '~'
+	| '!'
+	;
+
+cast_expression
+	: unary_expression
+	| '(' type_name ')' cast_expression
+	;
+
+multiplicative_expression
+	: cast_expression
+	| multiplicative_expression '*' cast_expression
+	| multiplicative_expression '/' cast_expression
+	| multiplicative_expression '%' cast_expression
+	;
+
+additive_expression
+	: multiplicative_expression
+	| additive_expression '+' multiplicative_expression
+	| additive_expression '-' multiplicative_expression
+	;
+
+shift_expression
+	: additive_expression
+	| shift_expression LEFT_OP additive_expression
+	| shift_expression RIGHT_OP additive_expression
+	;
+
+relational_expression
+	: shift_expression
+	| relational_expression '<' shift_expression
+	| relational_expression '>' shift_expression
+	| relational_expression LE_OP shift_expression
+	| relational_expression GE_OP shift_expression
+	;
+
+equality_expression
+	: relational_expression
+	| equality_expression EQ_OP relational_expression
+	| equality_expression NE_OP relational_expression
+	;
+
+and_expression
+	: equality_expression
+	| and_expression '&' equality_expression
+	;
+
+exclusive_or_expression
+	: and_expression
+	| exclusive_or_expression '^' and_expression
+	;
+
+inclusive_or_expression
+	: exclusive_or_expression
+	| inclusive_or_expression '|' exclusive_or_expression
+	;
+
+logical_and_expression
+	: inclusive_or_expression
+	| logical_and_expression AND_OP inclusive_or_expression
+	;
+
+logical_or_expression
+	: logical_and_expression
+	| logical_or_expression OR_OP logical_and_expression
+	;
+
+conditional_expression
+	: logical_or_expression
+	| logical_or_expression '?' expression ':' conditional_expression
+	;
+
+assignment_expression
+	: conditional_expression
+	| unary_expression assignment_operator assignment_expression
+	;
+
+assignment_operator
+	: '='
+	| MUL_ASSIGN
+	| DIV_ASSIGN
+	| MOD_ASSIGN
+	| ADD_ASSIGN
+	| SUB_ASSIGN
+	| LEFT_ASSIGN
+	| RIGHT_ASSIGN
+	| AND_ASSIGN
+	| XOR_ASSIGN
+	| OR_ASSIGN
+	;
+
+expression
+	: assignment_expression
+	| expression ',' assignment_expression
+	;
+
+constant_expression
+	: conditional_expression
+	;
+
+declaration
+	: declaration_specifiers
+	| declaration_specifiers init_declarator_list
+	;
+
+declaration_specifiers
+	: type_specifier
+	| type_specifier declaration_specifiers
+	| type_qualifier
+	| type_qualifier declaration_specifiers
+	;
+
+init_declarator_list
+	: init_declarator
+	| init_declarator_list ',' init_declarator
+	;
+
+init_declarator
+	: declarator
+	| declarator '=' initializer
+	;
+
+type_specifier
+	: VOID
+	| CHAR
+	| SHORT
+	| INT
+	| LONG
+	| FLOAT
+	| DOUBLE
+	| SIGNED
+	| UNSIGNED
+	| struct_or_union_specifier
+	| enum_specifier
+	| TYPE_NAME
+        | VAR
+        | PVAL
+        | BMSCR
+        | PREFSTR
+        | PEXINFO
+        | NULLPTR
+        | STR
+        | SPTR
+        | ARRAY
+	;
+
+struct_or_union_specifier
+	: struct_or_union IDENTIFIER '{' struct_declaration_list '}'
+	| struct_or_union '{' struct_declaration_list '}'
+	| struct_or_union IDENTIFIER
+	;
+
+struct_or_union
+	: STRUCT
+	| UNION
+	;
+
+struct_declaration_list
+	: struct_declaration
+	| struct_declaration_list struct_declaration
+	;
+
+struct_declaration
+	: specifier_qualifier_list struct_declarator_list
+	;
+
+specifier_qualifier_list
+	: type_specifier specifier_qualifier_list
+	| type_specifier
+	| type_qualifier specifier_qualifier_list
+	| type_qualifier
+	;
+
+struct_declarator_list
+	: struct_declarator
+	| struct_declarator_list ',' struct_declarator
+	;
+
+struct_declarator
+	: declarator
+	| ':' constant_expression
+	| declarator ':' constant_expression
+	;
+
+enum_specifier
+	: ENUM '{' enumerator_list '}'
+	| ENUM IDENTIFIER '{' enumerator_list '}'
+	| ENUM IDENTIFIER
+	;
+
+enumerator_list
+	: enumerator
+	| enumerator_list ',' enumerator
+	;
+
+enumerator
+	: IDENTIFIER
+	| IDENTIFIER '=' constant_expression
+	;
+
+type_qualifier
+	: CONST
+	| VOLATILE
+	;
+
+declarator
+	: direct_declarator
+	;
+
+direct_declarator
+	: IDENTIFIER
+	| '(' declarator ')'
+	| direct_declarator '[' constant_expression ']'
+	| direct_declarator '[' ']'
+	| direct_declarator '(' parameter_type_list ')'
+	| direct_declarator '(' identifier_list ')'
+	| direct_declarator '(' ')'
+	;
+
+type_qualifier_list
+	: type_qualifier
+	| type_qualifier_list type_qualifier
+	;
 
 
+parameter_type_list
+	: parameter_list
+	| parameter_list ',' ELLIPSIS
+	;
 
-// CONDITIONS, FOR A IF, FOR, AND WHILE STATEMENTS /
-condition : operand operator operand { $$ = $1 + $2 + $3;}
-		  | complex_condition { $$ = $1;}
+parameter_list
+	: parameter_declaration
+	| parameter_list ',' parameter_declaration
+	;
 
-//COMPOST CONDITIONS WITH IF STATEMENT
-complex_condition : OPEN_PARENTHESES complex_condition CLOSE_PARENTHESES { $$ = "(" + $2 + ")";}
-			      | operand math_operator complex_condition { $$ = $1 + $2 + $3;}
-			      | operand operator complex_condition { $$ = $1 + $2 + $3;}
-			      | operand  { $$ = $1 ;}
+parameter_declaration
+	: declaration_specifiers declarator
+	| declaration_specifiers abstract_declarator
+	| declaration_specifiers
+	;
 
+identifier_list
+	: IDENTIFIER
+	| identifier_list ',' IDENTIFIER
+	;
 
-//ATRIBUITION FOR "FOR", PREVENTS BREAKS LINE /
-for_operation : operand ATRIBUITION operand math_operator operand {$$ = $1 + "= " + $3 + $4 + $5;}
+type_name
+	: specifier_qualifier_list
+	| specifier_qualifier_list abstract_declarator
+	;
 
-//MATH OPERATIONS /
-operation : operand ATRIBUITION operand math_operator operand {$$ = "\n" + $1 + "= " + $3 + $4 + $5 + ";\n";}
-		  | operand ATRIBUITION expression { $$ = "\n" + $1 + " = " + $3 + ";";}
+abstract_declarator
+	: direct_abstract_declarator
+	;
 
-//COMPOST EXPRESSION WITH CALCULUS
-expression : OPEN_PARENTHESES expression CLOSE_PARENTHESES { $$ = "(" + $2 + ")";}
-		   | operand math_operator expression { $$ = $1 + $2 + $3;}
-		   | NUMBER NUMBER { $$ = $1 + $2;}
-		   | operand  { $$ = $1 ;}
+direct_abstract_declarator
+	: '(' abstract_declarator ')'
+	| '[' ']'
+	| '[' constant_expression ']'
+	| direct_abstract_declarator '[' ']'
+	| direct_abstract_declarator '[' constant_expression ']'
+	| '(' ')'
+	| '(' parameter_type_list ')'
+	| direct_abstract_declarator '(' ')'
+	| direct_abstract_declarator '(' parameter_type_list ')'
+	;
 
-//OPERATIONS WITH METHODS 
-methods : IDENTIFIER DOT IDENTIFIER ATRIBUITION operand { $$ = "\n" + $1 + "." + $3 + "=" + $5 + ";";}
-		| IDENTIFIER DOT IDENTIFIER OPEN_PARENTHESES CLOSE_PARENTHESES { $$ = "\n" + $1 + "." + $3 + "();";}
-		| operand ATRIBUITION IDENTIFIER DOT IDENTIFIER OPEN_PARENTHESES CLOSE_PARENTHESES { $$ = "\n" + $1 + "=" + $3 + "." + $5 + "();";}
+initializer
+	: assignment_expression
+	| '{' initializer_list '}'
+	| '{' initializer_list ',' '}'
+	;
 
-// OPERANDS 
-operand : IDENTIFIER { $$ = $1;}
-		| NUMBER	 { $$ = $1;}
-		| IDENTIFIER OPEN_BRACKET NUMBER CLOSE_BRACKET { $$ = $1 + "[" + $3 + "]";}
-		| IDENTIFIER OPEN_BRACKET IDENTIFIER CLOSE_BRACKET { $$ = $1 + "[" + $3 + "]";}
+initializer_list
+	: initializer
+	| initializer_list ',' initializer
+	;
 
-// OPERATORS
-operator : EQUALS { $$ = "==";}
-		 | NOT_EQUALS { $$ = "!=";}
-		 | GREATER { $$ = ">";}
-		 | GREATER_EQUALS { $$ = ">=";}
-		 | LESS { $$ = "<";}
-		 | LESS_EQUALS { $$ = "<=";}
+labeled_statement
+	: '*' IDENTIFIER
+	;
 
-//MATH OPERATORS
-math_operator :  PLUS { $$ = "+";}
-			  | MINUS { $$ = "-";}
-			  | DIVISION { $$ = "/";}
-			  | MULTIPLICATION {$$ = "*";}
+compound_statement
+	: '{' NEWLINE '}'
+	| '{' NEWLINE statement_list '}'
+	| '{' NEWLINE declaration_list '}'
+	| '{' NEWLINE declaration_list statement_list '}'
+	;
 
-// ATRIBUITIONS
-atribuition : operand ATRIBUITION operand { $$ = "\n" + $1 + " = " + $3 + ";";}
-			| operand ATRIBUITION STRING_TO_PRINT { $$ = "\n" + $1 + " = " + $3 + ";";}
-			| operand ATRIBUITION IDENTIFIER DOT LENGTH { $$ = "\n" + $1 + " = " + $3 + ".length();";}
-			| operand ATRIBUITION IDENTIFIER DOT TRIM OPEN_PARENTHESES CLOSE_PARENTHESES { $$ = "\n" + $1 + " = " + $3 + ".trim();";}
+declaration_list
+	: declaration
+	| declaration_list declaration
+	;
+
+statement_list
+	: statement
+	| statement_list statement
+	;
+
+expression_statement
+	: expression
+        | expression jump_statement // onerror goto *label_0241
+	;
+
+selection_statement
+	: IF '(' expression ')' statement %prec LOWER_THAN_ELSE
+	| IF '(' expression ')' statement ELSE statement
+	;
+
+iteration_statement
+	: WHILE '(' expression ')' statement
+	| DO statement WHILE '(' expression ')'
+	| FOR '(' expression_statement expression_statement ')' statement
+	| FOR '(' expression_statement expression_statement expression ')' statement
+	;
+
+jump_statement
+	: GOTO '*' IDENTIFIER
+        | GOTO STRING_LITERAL ',' '*' IDENTIFIER //button goto "refresh", *label_1984
+	| GOTO '*' IDENTIFIER //onerror goto *label_0241
+	| GOSUB '*' IDENTIFIER
+	| GOSUB STRING_LITERAL ',' '*' IDENTIFIER //button gosub "fill", *label_1997
+	| CONTINUE
+	| CONTINUE expression
+	| BREAK
+	| RETURN
+	| RETURN expression
+	;
+
+translation_unit
+	: external_declaration
+	| translation_unit external_declaration
+	;
+
+external_declaration
+	: function_definition
+	| declaration
+	;
+
+function_definition
+	: declaration_specifiers declarator declaration_list compound_statement
+	| declaration_specifiers declarator compound_statement
+	| declarator declaration_list compound_statement
+	| declarator compound_statement
+	;
 
 %%
 
@@ -219,6 +463,7 @@ atribuition : operand ATRIBUITION operand { $$ = "\n" + $1 + " = " + $3 + ";";}
 
 	/* Interface com o JFlex */
 	private int yylex(){
+          //System.out.println("ptr: " + stateptr + " ptrmax: " + stateptrmax);
 		int yyl_return = -1;
 		try {
 			yyl_return = lexer.yylex();
@@ -230,20 +475,22 @@ atribuition : operand ATRIBUITION operand { $$ = "\n" + $1 + " = " + $3 + ";";}
 
 	/* Reporte de erro */
 	public void yyerror(String error){
-		System.err.println("Error: " + error);
-	}
+          System.err.println("Error: " + error + " " + lexer.yystate() + " " + lexer.yytext());
+        }
 
-	// Interface com o JFlex eh criado no construtor
-	public Parser(Reader r){
+        // Interface com o JFlex eh criado no construtor
+        public Parser(Reader r, boolean debug){
+                yydebug = debug;
 		lexer = new Yylex(r, this);
 	}
 
 	// Main
 	public static void main(String[] args){
-		try{ 
-			Parser yyparser = new Parser(new FileReader(args[0]));
+		try{
+                        boolean debug = args[0].contains("test");
+                        Parser yyparser = new Parser(new FileReader(args[0]), debug);
 			yyparser.yyparse();
-			} catch (IOException ex) {
+			} catch (Exception ex) {
 				System.err.println("Error: " + ex);
 			}
 	}
