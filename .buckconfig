@@ -1,0 +1,7 @@
+[alias]
+  app = //:hsp_transpiler
+
+[java]
+  src_roots = /src/java
+  source_level = 8
+  target_level = 8
