@@ -20,6 +20,8 @@
 
 %token CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
 
+%token REPEAT LOOP
+
 %token NEWLINE
 
 %nonassoc LOWER_THAN_ELSE
@@ -34,26 +36,50 @@ hsp_source
         ;
 
 chunk
-        : statement { if($1.sval != null) System.out.println("Get:0:0 " + $1.sval + ";"); }
+        : statement {
+    if($1.sval != null) {
+      //System.out.println($1.sval);
+      curHunk += "\n";
+
+   if(hunkFound) {
+     startHunk(hunkName, curHunk);
+     curHunk = "";
+     hunkName = "";
+   } else {
+      curHunk += $1.sval;
+   }
+    }
+ }
         | NEWLINE
         |
         ;
 
 macro
-        : '#' IDENTIFIER args
+       : '#' IDENTIFIER args {
+      System.out.println($2.sval);
+  switch($3.sval) {
+    case "defcfunc":
+    case "deffunc":
+    default:
+      String[] spl = $3.sval.split(",");
+      $$ = new ParserVal("}\r\nfun " + $3.sval + "(" + $4.sval + "): Int {");
+      break;
+  }
+ }
         | '#' IDENTIFIER
         ;
 
 args
         : primary_expression args
-        | primary_expression
+        | lis
+        |
         ;
 
 lis
-        : type_specifier IDENTIFIER ',' lis { $$ = new ParserVal($1.sval + " " + $2.sval + ", " + $3.sval); }
-        | type_specifier ',' lis { $$ = new ParserVal($1.sval + " hoge, " + $3.sval); }
-        | type_specifier IDENTIFIER { $$ = new ParserVal($1.sval + " " + $2.sval); }
-        | type_specifier { $$ = new ParserVal($1.sval + " hoge"); }
+        : lis ',' type_specifier IDENTIFIER { $$ = new ParserVal($4.sval + ": " + $3.sval + ", " + $1.sval); }
+        | lis ',' type_specifier { $$ = new ParserVal("hoge: " + $3.sval + ", " + $1.sval); }
+        | type_specifier IDENTIFIER { $$ = new ParserVal($2.sval + ": " + $1.sval); }
+        | type_specifier { $$ = new ParserVal("hoge: " + $1.sval); }
         ;
 
 // from c
@@ -76,11 +102,16 @@ primary_expression
         | SWITCH // it's more like a function here
         | CASE
         | WHILE // while(LoopCount < 20)
+        | BREAK
 	| '(' expression ')' { $$ = new ParserVal("(" + $2.sval + ")"); }
 	;
 
 postfix_expression
 	: primary_expression
+        | REPEAT expression ',' expression { $$ = new ParserVal("for(i in " + $2.sval + " until " + $4.sval + ") {"); }
+        | REPEAT expression { $$ = new ParserVal("for(i in 0 until " + $2.sval + ") {"); }
+        | REPEAT { $$ = new ParserVal("while(true) {"); }
+        | LOOP { $$ = new ParserVal("}"); }
 	| postfix_expression '[' expression ']' { $$ = new ParserVal($1.sval + "[" + $2.sval + "]"); }
 	| postfix_expression '(' ')' { $$ = new ParserVal($1.sval + "()"); }
         | postfix_expression argument_expression_list {
@@ -97,7 +128,11 @@ postfix_expression
               break;
           }
  }
-        | postfix_expression '(' argument_expression_list ')' { $$ = new ParserVal($1.sval + "(" + $3.sval + ")"); }
+        | postfix_expression '(' argument_expression_list ')' {
+          String[] vals = $3.sval.split(", ");
+
+          $$ = new ParserVal($1.sval + "[" + String.join("][", vals) + "]");
+          }
 	| postfix_expression '.' IDENTIFIER
 	| postfix_expression PTR_OP STRING_LITERAL args //var_512->"Navigate" var_1102
         | postfix_expression jump_statement
@@ -140,6 +175,7 @@ multiplicative_expression
 	: cast_expression
 	| multiplicative_expression '*' cast_expression { $$ = new ParserVal($1.sval + " * " + $3.sval); }
 	| multiplicative_expression '/' cast_expression { $$ = new ParserVal($1.sval + " / " + $3.sval); }
+	| multiplicative_expression '\\' cast_expression { $$ = new ParserVal($1.sval + " \\ " + $3.sval); }
 	| multiplicative_expression '%' cast_expression { $$ = new ParserVal($1.sval + " % " + $3.sval); }
 	;
 
@@ -169,24 +205,9 @@ equality_expression
 	| equality_expression NE_OP relational_expression { $$ = new ParserVal($1.sval + " != " + $3.sval); }
 	;
 
-and_expression
-	: equality_expression
-	| and_expression '&' equality_expression
-	;
-
-exclusive_or_expression
-	: and_expression
-	| exclusive_or_expression '^' and_expression
-	;
-
-inclusive_or_expression
-	: exclusive_or_expression
-	| inclusive_or_expression '|' exclusive_or_expression
-	;
-
 logical_and_expression
-	: inclusive_or_expression
-	| logical_and_expression AND_OP inclusive_or_expression { $$ = new ParserVal($1.sval + " && " + $3.sval); }
+	: equality_expression
+	| logical_and_expression AND_OP equality_expression { $$ = new ParserVal($1.sval + " && " + $3.sval); }
 	;
 
 logical_or_expression
@@ -253,10 +274,10 @@ type_specifier
 	: VOID
 	| CHAR
 	| SHORT
-	| INT
-	| LONG
-	| FLOAT
-	| DOUBLE
+	| INT { $$ = new ParserVal("Int"); }
+	| LONG { $$ = new ParserVal("Long"); }
+	| FLOAT { $$ = new ParserVal("Float"); }
+	| DOUBLE { $$ = new ParserVal("Double"); }
 	| SIGNED
 	| UNSIGNED
 	| struct_or_union_specifier
@@ -268,7 +289,7 @@ type_specifier
         | PREFSTR
         | PEXINFO
         | NULLPTR
-        | STR
+        | STR { $$ = new ParserVal("String"); }
         | SPTR
         | ARRAY
 	;
@@ -405,8 +426,15 @@ initializer_list
 	| initializer_list ',' initializer { $$ = new ParserVal($1.sval + ", " + $3.sval); }
 	;
 
+// TODO: Return statement right before a label can be converted into a function in some cases?
+// TODO: Two labels right next to each other can be consolidated
+// TODO: A label followed by a goto is unnecessary indirection
+// TODO: What about conditional labels based on gosub/goto?
+// TODO: Duplicate hunks based on if they contain return or not and can be reached by both goto and gosub
+// TODO: Rewrite all defcfunc with label immediately following to use while(true) and break
+
 labeled_statement
-        : '*' IDENTIFIER { $$ = new ParserVal($2.sval); }
+: '*' IDENTIFIER { hunkFound = true; hunkName = $2.sval; $$ = new ParserVal("*" + $2.sval); }
 	;
 
 compound_statement
@@ -417,13 +445,13 @@ compound_statement
 	;
 
 declaration_list
-	: declaration { $$ = new ParserVal($1.sval + ";"); }
-	| declaration_list declaration { $$ = new ParserVal($1.sval + ";\r\n" + $2.sval); }
+	: declaration { $$ = new ParserVal($1.sval); }
+	| declaration_list declaration { $$ = new ParserVal($1.sval + "\r\n" + $2.sval); }
 	;
 
 statement_list
-        : statement { $$ = new ParserVal($1.sval + ";"); }
-        | statement_list statement { $$ = new ParserVal($1.sval + ";\r\n" + $2.sval); }
+        : statement { $$ = new ParserVal($1.sval); }
+        | statement_list statement { $$ = new ParserVal($1.sval + "\r\n" + $2.sval); }
 	;
 
 expression_statement
@@ -433,10 +461,10 @@ expression_statement
 
 selection_statement
         : IF '(' expression ')' statement %prec LOWER_THAN_ELSE {
-          $$ = new ParserVal("if (" + $3.sval + ") {\n " + $5.sval + ";\n}");
+          $$ = new ParserVal("if (" + $3.sval + ") {\r\n " + $5.sval + "\r\n}");
         }
         | IF '(' expression ')' statement ELSE statement {
-          $$ = new ParserVal("if (" + $3.sval + ") {\n " + $5.sval + ";\n}\nelse {\n " + $7.sval + ";\n}");
+          $$ = new ParserVal("if (" + $3.sval + ") {\r\n " + $5.sval + "\r\n}\r\nelse {\r\n " + $7.sval + ";\r\n}");
         }
         ;
 
@@ -448,20 +476,29 @@ iteration_statement
 	;
 
 jump_statement
-        : GOTO '*' IDENTIFIER { $$ = new ParserVal("goto_" + $3.sval + "()"); }
+        : GOTO '*' IDENTIFIER { $$ = new ParserVal("*goto " + $3.sval); }
         | GOTO STRING_LITERAL ',' '*' IDENTIFIER { $$ = new ParserVal("goto_button_" + $5.sval + "(" + $2.sval + ")"); } //button goto "refresh", *label_1984
-	| GOSUB '*' IDENTIFIER { $$ = new ParserVal("gosub_" + $3.sval + "()"); }
+	| GOSUB '*' IDENTIFIER { $$ = new ParserVal("*gosub " + $3.sval); }
 	| GOSUB STRING_LITERAL ',' '*' IDENTIFIER { $$ = new ParserVal("gosub_button_" + $5.sval + "(" + $2.sval + ")"); } //button gosub "fill", *label_1997
 	| CONTINUE
 	| CONTINUE expression { $$ = new ParserVal("continue; //" + $2.sval); }
 	| BREAK
 	| RETURN
-	| RETURN expression { $$ = new ParserVal("return " + $2.sval); }
+	| RETURN expression { $$ = new ParserVal("*return " + $2.sval); }
 	;
 
 %%
 
-        int i = 0;
+        public List<String> hunks = new ArrayList<String>();
+boolean hunkFound = false;
+String curHunk = "";
+String hunkName = "";
+
+public void startHunk(String name, String arg) {
+hunks.add(name + "\n" + arg);
+hunkFound = false;
+}
+
 	// Referencia ao JFlex
 	private Yylex lexer;
 
@@ -484,7 +521,7 @@ jump_statement
 
         // Interface com o JFlex eh criado no construtor
         public Parser(Reader r, boolean debug){
-                yydebug = false;
+                yydebug = debug;
 		lexer = new Yylex(r, this);
 	}
 
@@ -494,7 +531,27 @@ jump_statement
                         boolean debug = args[0].contains("test");
                         Parser yyparser = new Parser(new FileReader(args[0]), debug);
 			yyparser.yyparse();
+                for(int i = 0; i < yyparser.hunks.size(); i++) {
+                  System.out.println(yyparser.hunks.get(i) + "\n===========\n");
+                }
 			} catch (Exception ex) {
 				System.err.println("Error: " + ex);
 			}
 	}
+
+public class Hunk {
+  public List<String> entrances = new ArrayList<>();
+  public List<String> exits = new ArrayList<>();
+}
+
+public class Entrance {
+  String fromLabel;
+  boolean isGosub;
+  boolean isFallthrough;
+}
+
+public class Exit {
+  String toLabel;
+  boolean isReturn;
+  boolean unconditional; // not nested in an if
+}

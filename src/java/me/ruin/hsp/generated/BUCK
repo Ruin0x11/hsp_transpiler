@@ -1,0 +1,25 @@
+genrule(
+  name = "jflex",
+  srcs = [
+    "LexicalAnalyzer.flex",
+  ],
+  cmd = "C:\\bin\\jflex-1.6.1\\bin\\jflex " \
+      "%SRCDIR%\\LexicalAnalyzer.flex && sed -i \"1i package me.ruin.hsp.generated;\\n\" Yylex.java && move Yylex.java %OUT%",
+  out = "Yylex.java",
+)
+
+genrule(
+  name = "yacc",
+  srcs = [
+    "Parser.y",
+  ],
+  cmd = "yacc -J -Jpackage=me.ruin.hsp.generated " \
+      "%SRCDIR%\\Parser.y && move Parser.java %OUT%",
+  out = "Parser.java",
+)
+
+java_library(
+    name = "generated_lib",
+    srcs = [":jflex", ":yacc"] + glob(["ParserVal.java"]),
+    visibility = ["PUBLIC"],
+)

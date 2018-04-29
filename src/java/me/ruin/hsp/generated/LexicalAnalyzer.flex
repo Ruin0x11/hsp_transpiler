@@ -38,35 +38,35 @@ Comment   =";".*{NL}
 
 {Comment}			{  }
 
-"auto"			{ return Parser.AUTO; }
-"break"			{ return Parser.BREAK; }
-"char"			{ return Parser.CHAR; }
-"const"			{ return Parser.CONST; }
-"continue"		{ return Parser.CONTINUE; }
-"do"			{ return Parser.DO; }
-"double"		{ return Parser.DOUBLE; }
-"else"			{ return Parser.ELSE; }
-"enum"			{ return Parser.ENUM; }
-"extern"		{ return Parser.EXTERN; }
-"float"			{ return Parser.FLOAT; }
-"for"			{ return Parser.FOR; }
-"goto"			{ return Parser.GOTO; }
-"gosub"			{ return Parser.GOSUB; }
-"if"			{ return Parser.IF; }
-"int"			{ return Parser.INT; }
-"long"			{ return Parser.LONG; }
-"register"		{ return Parser.REGISTER; }
-"return"		{ return Parser.RETURN; }
-"short"			{ return Parser.SHORT; }
-"signed"		{ return Parser.SIGNED; }
-"sizeof"		{ return Parser.SIZEOF; }
-"static"		{ return Parser.STATIC; }
-"struct"		{ return Parser.STRUCT; }
-"typedef"		{ return Parser.TYPEDEF; }
-"union"			{ return Parser.UNION; }
-"unsigned"		{ return Parser.UNSIGNED; }
-"void"			{ return Parser.VOID; }
-"volatile"		{ return Parser.VOLATILE; }
+"auto"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.AUTO; }
+"break"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.BREAK; }
+"char"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.CHAR; }
+"const"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.CONST; }
+"continue"		{ yyparser.yylval = new ParserVal(yytext()); return Parser.CONTINUE; }
+"do"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.DO; }
+"double"		{ yyparser.yylval = new ParserVal(yytext()); return Parser.DOUBLE; }
+"else"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.ELSE; }
+"enum"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.ENUM; }
+"extern"		{ yyparser.yylval = new ParserVal(yytext()); return Parser.EXTERN; }
+"float"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.FLOAT; }
+"for"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.FOR; }
+"goto"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.GOTO; }
+"gosub"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.GOSUB; }
+"if"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.IF; }
+"int"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.INT; }
+"long"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.LONG; }
+"register"		{ yyparser.yylval = new ParserVal(yytext()); return Parser.REGISTER; }
+"return"		{ yyparser.yylval = new ParserVal(yytext()); return Parser.RETURN; }
+"short"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.SHORT; }
+"signed"		{ yyparser.yylval = new ParserVal(yytext()); return Parser.SIGNED; }
+"sizeof"		{ yyparser.yylval = new ParserVal(yytext()); return Parser.SIZEOF; }
+"static"		{ yyparser.yylval = new ParserVal(yytext()); return Parser.STATIC; }
+"struct"		{ yyparser.yylval = new ParserVal(yytext()); return Parser.STRUCT; }
+"typedef"		{ yyparser.yylval = new ParserVal(yytext()); return Parser.TYPEDEF; }
+"union"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.UNION; }
+"unsigned"		{ yyparser.yylval = new ParserVal(yytext()); return Parser.UNSIGNED; }
+"void"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.VOID; }
+"volatile"		{ yyparser.yylval = new ParserVal(yytext()); return Parser.VOLATILE; }
 
 "var"     { return Parser.VAR; }
 "str"     { return Parser.STR; }
@@ -78,7 +78,10 @@ Comment   =";".*{NL}
 "nullptr" { return Parser.NULLPTR; }
 "array"   { return Parser.ARRAY; }
 
-{L}({L}|{D})*		{ yyparser.yylval = new ParserVal(yytext()); return Parser.IDENTIFIER; }
+"repeat"   { return Parser.REPEAT; }
+"loop"   { return Parser.LOOP; }
+
+{L}({L}|{D})*		{ count(); yyparser.yylval = new ParserVal(yytext()); return Parser.IDENTIFIER; }
 
 0[xX]{H}+{IS}?		{ yyparser.yylval = new ParserVal(yytext()); return Parser.CONSTANT; }
 0{D}+{IS}?		{ yyparser.yylval = new ParserVal(yytext()); return Parser.CONSTANT; }
@@ -110,8 +113,6 @@ L?\"(\\.|[^\\\"])*\"	{
 "++"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.INC_OP; }
 "--"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.DEC_OP; }
 "->"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.PTR_OP; }
-"&&"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.AND_OP; }
-"||"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.OR_OP; }
 "<="			{ yyparser.yylval = new ParserVal(yytext()); return Parser.LE_OP; }
 ">="			{ yyparser.yylval = new ParserVal(yytext()); return Parser.GE_OP; }
 "=="			{ yyparser.yylval = new ParserVal(yytext()); return Parser.EQ_OP; }
@@ -126,18 +127,19 @@ L?\"(\\.|[^\\\"])*\"	{
 ("["|"<:")		{ yyparser.yylval = new ParserVal(yytext()); return (int) '['; }
 ("]"|":>")		{ yyparser.yylval = new ParserVal(yytext()); return (int) ']'; }
 "."			{ yyparser.yylval = new ParserVal(yytext()); return (int) '.'; }
-"&"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.OR_OP; }
+"&"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.AND_OP; }
 "!"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '!'; }
 "~"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '~'; }
 "-"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '-'; }
 "+"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '+'; }
 "*"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '*'; }
 "/"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '/'; }
+"\\"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '\\'; }
 "%"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '%'; }
 "<"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '<'; }
 ">"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '>'; }
 "^"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '^'; }
-"|"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.AND_OP; }
+"|"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.OR_OP; }
 "?"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '?'; }
 "#"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '#'; }
 
