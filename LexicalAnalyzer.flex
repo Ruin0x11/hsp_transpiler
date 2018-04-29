@@ -15,7 +15,7 @@ import java.io.*;
 		this.yyparser = yyparser;
 	}
                 private void count() {
-                System.out.println("Get:" + yyline + ":" + yycolumn + " { " + yytext() + " } {" + yystate() + "}");
+                //System.out.println("Get:" + yyline + ":" + yycolumn + " { " + yytext() + " } {" + yystate() + "}");
         }
         private void comment() {}
         public int check_type() { return Parser.IDENTIFIER; }
@@ -38,106 +38,109 @@ Comment   =";".*{NL}
 
 {Comment}			{  }
 
-"auto"			{ count(); return Parser.AUTO; }
-"break"			{ count(); return Parser.BREAK; }
-"char"			{ count(); return Parser.CHAR; }
-"const"			{ count(); return Parser.CONST; }
-"continue"		{ count(); return Parser.CONTINUE; }
-"do"			{ count(); return Parser.DO; }
-"double"		{ count(); return Parser.DOUBLE; }
-"else"			{ count(); return Parser.ELSE; }
-"enum"			{ count(); return Parser.ENUM; }
-"extern"		{ count(); return Parser.EXTERN; }
-"float"			{ count(); return Parser.FLOAT; }
-"for"			{ count(); return Parser.FOR; }
-"goto"			{ count(); return Parser.GOTO; }
-"gosub"			{ count(); return Parser.GOSUB; }
-"if"			{ count(); return Parser.IF; }
-"int"			{ count(); return Parser.INT; }
-"long"			{ count(); return Parser.LONG; }
-"register"		{ count(); return Parser.REGISTER; }
-"return"		{ count(); return Parser.RETURN; }
-"short"			{ count(); return Parser.SHORT; }
-"signed"		{ count(); return Parser.SIGNED; }
-"sizeof"		{ count(); return Parser.SIZEOF; }
-"static"		{ count(); return Parser.STATIC; }
-"struct"		{ count(); return Parser.STRUCT; }
-"typedef"		{ count(); return Parser.TYPEDEF; }
-"union"			{ count(); return Parser.UNION; }
-"unsigned"		{ count(); return Parser.UNSIGNED; }
-"void"			{ count(); return Parser.VOID; }
-"volatile"		{ count(); return Parser.VOLATILE; }
+"auto"			{ return Parser.AUTO; }
+"break"			{ return Parser.BREAK; }
+"char"			{ return Parser.CHAR; }
+"const"			{ return Parser.CONST; }
+"continue"		{ return Parser.CONTINUE; }
+"do"			{ return Parser.DO; }
+"double"		{ return Parser.DOUBLE; }
+"else"			{ return Parser.ELSE; }
+"enum"			{ return Parser.ENUM; }
+"extern"		{ return Parser.EXTERN; }
+"float"			{ return Parser.FLOAT; }
+"for"			{ return Parser.FOR; }
+"goto"			{ return Parser.GOTO; }
+"gosub"			{ return Parser.GOSUB; }
+"if"			{ return Parser.IF; }
+"int"			{ return Parser.INT; }
+"long"			{ return Parser.LONG; }
+"register"		{ return Parser.REGISTER; }
+"return"		{ return Parser.RETURN; }
+"short"			{ return Parser.SHORT; }
+"signed"		{ return Parser.SIGNED; }
+"sizeof"		{ return Parser.SIZEOF; }
+"static"		{ return Parser.STATIC; }
+"struct"		{ return Parser.STRUCT; }
+"typedef"		{ return Parser.TYPEDEF; }
+"union"			{ return Parser.UNION; }
+"unsigned"		{ return Parser.UNSIGNED; }
+"void"			{ return Parser.VOID; }
+"volatile"		{ return Parser.VOLATILE; }
 
-"var"     { count(); return Parser.VAR; }
-"str"     { count(); return Parser.STR; }
-"sptr"    { count(); return Parser.SPTR; }
-"pval"    { count(); return Parser.PVAL; }
-"bmscr"   { count(); return Parser.BMSCR; }
-"prefstr" { count(); return Parser.PREFSTR; }
-"pexinfo" { count(); return Parser.PEXINFO; }
-"nullptr" { count(); return Parser.NULLPTR; }
-"array"   { count(); return Parser.ARRAY; }
+"var"     { return Parser.VAR; }
+"str"     { return Parser.STR; }
+"sptr"    { return Parser.SPTR; }
+"pval"    { return Parser.PVAL; }
+"bmscr"   { return Parser.BMSCR; }
+"prefstr" { return Parser.PREFSTR; }
+"pexinfo" { return Parser.PEXINFO; }
+"nullptr" { return Parser.NULLPTR; }
+"array"   { return Parser.ARRAY; }
 
-{L}({L}|{D})*		{ count(); return Parser.IDENTIFIER; }
+{L}({L}|{D})*		{ yyparser.yylval = new ParserVal(yytext()); return Parser.IDENTIFIER; }
 
-0[xX]{H}+{IS}?		{ count(); return Parser.CONSTANT; }
-0{D}+{IS}?		{ count(); return Parser.CONSTANT; }
-{D}+{IS}?		{ count(); return Parser.CONSTANT; }
-L?'(\\.|[^\\'])+'	{ count(); return Parser.CONSTANT; }
+0[xX]{H}+{IS}?		{ yyparser.yylval = new ParserVal(yytext()); return Parser.CONSTANT; }
+0{D}+{IS}?		{ yyparser.yylval = new ParserVal(yytext()); return Parser.CONSTANT; }
+{D}+{IS}?		{ yyparser.yylval = new ParserVal(yytext()); return Parser.CONSTANT; }
+L?'(\\.|[^\\'])+'	{ yyparser.yylval = new ParserVal(yytext()); return Parser.CONSTANT; }
 
-{D}+{E}{FS}?		{ count(); return Parser.CONSTANT; }
-{D}*"."{D}+({E})?{FS}?	{ count(); return Parser.CONSTANT; }
-{D}+"."{D}*({E})?{FS}?	{ count(); return Parser.CONSTANT; }
+{D}+{E}{FS}?		{ yyparser.yylval = new ParserVal(yytext()); return Parser.CONSTANT; }
+{D}*"."{D}+({E})?{FS}?	{yyparser.yylval = new ParserVal(yytext()); return Parser.CONSTANT; }
+{D}+"."{D}*({E})?{FS}?	{yyparser.yylval = new ParserVal(yytext()); return Parser.CONSTANT; }
 
-L?\"(\\.|[^\\\"])*\"	{ count(); return Parser.STRING_LITERAL; }
+L?\"(\\.|[^\\\"])*\"	{
+        yyparser.yylval = new ParserVal(yytext());
+                return Parser.STRING_LITERAL;
+        }
 
-"..."			{ count(); return Parser.ELLIPSIS; }
-">>="			{ count(); return Parser.RIGHT_ASSIGN; }
-"<<="			{ count(); return Parser.LEFT_ASSIGN; }
-"+="			{ count(); return Parser.ADD_ASSIGN; }
-"-="			{ count(); return Parser.SUB_ASSIGN; }
-"*="			{ count(); return Parser.MUL_ASSIGN; }
-"/="			{ count(); return Parser.DIV_ASSIGN; }
-"%="			{ count(); return Parser.MOD_ASSIGN; }
-"&="			{ count(); return Parser.AND_ASSIGN; }
-"^="			{ count(); return Parser.XOR_ASSIGN; }
-"|="			{ count(); return Parser.OR_ASSIGN; }
-">>"			{ count(); return Parser.RIGHT_OP; }
-"<<"			{ count(); return Parser.LEFT_OP; }
-"++"			{ count(); return Parser.INC_OP; }
-"--"			{ count(); return Parser.DEC_OP; }
-"->"			{ count(); return Parser.PTR_OP; }
-"&&"			{ count(); return Parser.AND_OP; }
-"||"			{ count(); return Parser.OR_OP; }
-"<="			{ count(); return Parser.LE_OP; }
-">="			{ count(); return Parser.GE_OP; }
-"=="			{ count(); return Parser.EQ_OP; }
-"!="			{ count(); return Parser.NE_OP; }
-("{"|"<%")		{ count(); return (int) '{'; }
-("}"|"%>")		{ count(); return (int) '}'; }
-","			{ count(); return (int) ','; }
-":"			{ count(); return (int) ':'; }
-"="			{ count(); return (int) '='; }
-"("			{ count(); return (int) '('; }
-")"			{ count(); return (int) ')'; }
-("["|"<:")		{ count(); return (int) '['; }
-("]"|":>")		{ count(); return (int) ']'; }
-"."			{ count(); return (int) '.'; }
-"&"			{ count(); return Parser.OR_OP; }
-"!"			{ count(); return (int) '!'; }
-"~"			{ count(); return (int) '~'; }
-"-"			{ count(); return (int) '-'; }
-"+"			{ count(); return (int) '+'; }
-"*"			{ count(); return (int) '*'; }
-"/"			{ count(); return (int) '/'; }
-"%"			{ count(); return (int) '%'; }
-"<"			{ count(); return (int) '<'; }
-">"			{ count(); return (int) '>'; }
-"^"			{ count(); return (int) '^'; }
-"|"			{ count(); return Parser.AND_OP; }
-"?"			{ count(); return (int) '?'; }
-"#"			{ count(); return (int) '#'; }
+"..."			{ yyparser.yylval = new ParserVal(yytext()); return Parser.ELLIPSIS; }
+">>="			{ yyparser.yylval = new ParserVal(yytext()); return Parser.RIGHT_ASSIGN; }
+"<<="			{ yyparser.yylval = new ParserVal(yytext()); return Parser.LEFT_ASSIGN; }
+"+="			{ yyparser.yylval = new ParserVal(yytext()); return Parser.ADD_ASSIGN; }
+"-="			{ yyparser.yylval = new ParserVal(yytext()); return Parser.SUB_ASSIGN; }
+"*="			{ yyparser.yylval = new ParserVal(yytext()); return Parser.MUL_ASSIGN; }
+"/="			{ yyparser.yylval = new ParserVal(yytext()); return Parser.DIV_ASSIGN; }
+"%="			{ yyparser.yylval = new ParserVal(yytext()); return Parser.MOD_ASSIGN; }
+"&="			{ yyparser.yylval = new ParserVal(yytext()); return Parser.AND_ASSIGN; }
+"^="			{ yyparser.yylval = new ParserVal(yytext()); return Parser.XOR_ASSIGN; }
+"|="			{ yyparser.yylval = new ParserVal(yytext()); return Parser.OR_ASSIGN; }
+">>"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.RIGHT_OP; }
+"<<"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.LEFT_OP; }
+"++"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.INC_OP; }
+"--"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.DEC_OP; }
+"->"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.PTR_OP; }
+"&&"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.AND_OP; }
+"||"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.OR_OP; }
+"<="			{ yyparser.yylval = new ParserVal(yytext()); return Parser.LE_OP; }
+">="			{ yyparser.yylval = new ParserVal(yytext()); return Parser.GE_OP; }
+"=="			{ yyparser.yylval = new ParserVal(yytext()); return Parser.EQ_OP; }
+"!="			{ yyparser.yylval = new ParserVal(yytext()); return Parser.NE_OP; }
+("{"|"<%")		{ yyparser.yylval = new ParserVal(yytext()); return (int) '{'; }
+("}"|"%>")		{ yyparser.yylval = new ParserVal(yytext()); return (int) '}'; }
+","			{ yyparser.yylval = new ParserVal(yytext()); return (int) ','; }
+":"			{ yyparser.yylval = new ParserVal(yytext()); return (int) ':'; }
+"="			{ yyparser.yylval = new ParserVal(yytext()); return (int) '='; }
+"("			{ yyparser.yylval = new ParserVal(yytext()); return (int) '('; }
+")"			{ yyparser.yylval = new ParserVal(yytext()); return (int) ')'; }
+("["|"<:")		{ yyparser.yylval = new ParserVal(yytext()); return (int) '['; }
+("]"|":>")		{ yyparser.yylval = new ParserVal(yytext()); return (int) ']'; }
+"."			{ yyparser.yylval = new ParserVal(yytext()); return (int) '.'; }
+"&"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.OR_OP; }
+"!"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '!'; }
+"~"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '~'; }
+"-"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '-'; }
+"+"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '+'; }
+"*"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '*'; }
+"/"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '/'; }
+"%"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '%'; }
+"<"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '<'; }
+">"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '>'; }
+"^"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '^'; }
+"|"			{ yyparser.yylval = new ParserVal(yytext()); return Parser.AND_OP; }
+"?"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '?'; }
+"#"			{ yyparser.yylval = new ParserVal(yytext()); return (int) '#'; }
 
-{NL}                    { count(); return Parser.NEWLINE; }
-{WS}                    { count(); }
+{NL}                    { return Parser.NEWLINE; }
+{WS}                    { }
 .			{ /* ignore bad characters */ }

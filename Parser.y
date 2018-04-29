@@ -34,13 +34,13 @@ hsp_source
         ;
 
 chunk
-        : statement { System.out.println("ENDSTATEMENT"); }
+        : statement { if($1.sval != null) System.out.println("Get:0:0 " + $1.sval + ";"); }
         | NEWLINE
         |
         ;
 
 macro
-        : '#' IDENTIFIER args { System.out.println("MACRO"); }
+        : '#' IDENTIFIER args
         | '#' IDENTIFIER
         ;
 
@@ -50,10 +50,10 @@ args
         ;
 
 lis
-        : type_specifier IDENTIFIER ',' lis
-        | type_specifier ',' lis
-        | type_specifier IDENTIFIER
-        | type_specifier
+        : type_specifier IDENTIFIER ',' lis { $$ = new ParserVal($1.sval + " " + $2.sval + ", " + $3.sval); }
+        | type_specifier ',' lis { $$ = new ParserVal($1.sval + " hoge, " + $3.sval); }
+        | type_specifier IDENTIFIER { $$ = new ParserVal($1.sval + " " + $2.sval); }
+        | type_specifier { $$ = new ParserVal($1.sval + " hoge"); }
         ;
 
 // from c
@@ -70,21 +70,34 @@ statement
 
 primary_expression
 	: lis
-        | IDENTIFIER
-	| CONSTANT
+        | CONSTANT
 	| STRING_LITERAL
+        | IDENTIFIER
         | SWITCH // it's more like a function here
         | CASE
         | WHILE // while(LoopCount < 20)
-	| '(' expression ')'
+	| '(' expression ')' { $$ = new ParserVal("(" + $2.sval + ")"); }
 	;
 
 postfix_expression
 	: primary_expression
-	| postfix_expression '[' expression ']'
-	| postfix_expression '(' ')'
-	| postfix_expression     argument_expression_list
-	| postfix_expression '(' argument_expression_list ')'
+	| postfix_expression '[' expression ']' { $$ = new ParserVal($1.sval + "[" + $2.sval + "]"); }
+	| postfix_expression '(' ')' { $$ = new ParserVal($1.sval + "()"); }
+        | postfix_expression argument_expression_list {
+          switch($2.sval.charAt(0)) {
+            case '+':
+            case '-':
+            case '*':
+            case '/':
+            case '%':
+              $$ = new ParserVal($1.sval + " " + $2.sval );
+            break;
+            default:
+              $$ = new ParserVal($1.sval + "(" + $2.sval + ")" );
+              break;
+          }
+ }
+        | postfix_expression '(' argument_expression_list ')' { $$ = new ParserVal($1.sval + "(" + $3.sval + ")"); }
 	| postfix_expression '.' IDENTIFIER
 	| postfix_expression PTR_OP STRING_LITERAL args //var_512->"Navigate" var_1102
         | postfix_expression jump_statement
@@ -93,16 +106,20 @@ postfix_expression
 	;
 
 argument_expression_list
-	: assignment_expression
-	| argument_expression_list ',' assignment_expression
-        | argument_expression_list ',' // gmode 6, , , 80
-	;
+        : assignment_expression
+	| argument_expression_list ',' assignment_expression { $$ = new ParserVal($1.sval + ", " + $3.sval);}
+        | argument_expression_list ','  { $$ = new ParserVal($1.sval + ", null"); } // gmode 6, , , 80
+        ;
 
 unary_expression
-	: postfix_expression
-	| unary_operator cast_expression
-	| SIZEOF unary_expression
-	| SIZEOF '(' type_name ')'
+        : postfix_expression
+	| unary_operator cast_expression {
+        if ($1.sval.charAt(0) == '-') {
+          $$ = new ParserVal($1.sval + $2.sval);
+        } else {
+          $$ = new ParserVal($1.sval + " " + $2.sval);
+        }
+        }
 	;
 
 unary_operator
@@ -121,15 +138,15 @@ cast_expression
 
 multiplicative_expression
 	: cast_expression
-	| multiplicative_expression '*' cast_expression
-	| multiplicative_expression '/' cast_expression
-	| multiplicative_expression '%' cast_expression
+	| multiplicative_expression '*' cast_expression { $$ = new ParserVal($1.sval + " * " + $3.sval); }
+	| multiplicative_expression '/' cast_expression { $$ = new ParserVal($1.sval + " / " + $3.sval); }
+	| multiplicative_expression '%' cast_expression { $$ = new ParserVal($1.sval + " % " + $3.sval); }
 	;
 
 additive_expression
 	: multiplicative_expression
-	| additive_expression '+' multiplicative_expression
-	| additive_expression '-' multiplicative_expression
+	| additive_expression '+' multiplicative_expression { $$ = new ParserVal($1.sval + " + " + $3.sval); }
+	| additive_expression '-' multiplicative_expression { $$ = new ParserVal($1.sval + " - " + $3.sval); }
 	;
 
 shift_expression
@@ -140,16 +157,16 @@ shift_expression
 
 relational_expression
 	: shift_expression
-	| relational_expression '<' shift_expression
-	| relational_expression '>' shift_expression
-	| relational_expression LE_OP shift_expression
-	| relational_expression GE_OP shift_expression
+	| relational_expression '<' shift_expression { $$ = new ParserVal($1.sval + " < " + $3.sval); }
+	| relational_expression '>' shift_expression { $$ = new ParserVal($1.sval + " > " + $3.sval); }
+	| relational_expression LE_OP shift_expression { $$ = new ParserVal($1.sval + " <= " + $3.sval); }
+	| relational_expression GE_OP shift_expression { $$ = new ParserVal($1.sval + " >= " + $3.sval); }
 	;
 
 equality_expression
 	: relational_expression
-	| equality_expression EQ_OP relational_expression
-	| equality_expression NE_OP relational_expression
+	| equality_expression EQ_OP relational_expression { $$ = new ParserVal($1.sval + " == " + $3.sval); }
+	| equality_expression NE_OP relational_expression { $$ = new ParserVal($1.sval + " != " + $3.sval); }
 	;
 
 and_expression
@@ -169,12 +186,12 @@ inclusive_or_expression
 
 logical_and_expression
 	: inclusive_or_expression
-	| logical_and_expression AND_OP inclusive_or_expression
+	| logical_and_expression AND_OP inclusive_or_expression { $$ = new ParserVal($1.sval + " && " + $3.sval); }
 	;
 
 logical_or_expression
 	: logical_and_expression
-	| logical_or_expression OR_OP logical_and_expression
+	| logical_or_expression OR_OP logical_and_expression { $$ = new ParserVal($1.sval + " || " + $3.sval); }
 	;
 
 conditional_expression
@@ -184,16 +201,16 @@ conditional_expression
 
 assignment_expression
 	: conditional_expression
-	| unary_expression assignment_operator assignment_expression
+	| unary_expression assignment_operator assignment_expression { $$ = new ParserVal($1.sval + " " + $2.sval + " " + $3.sval); }
 	;
 
 assignment_operator
 	: '='
-	| MUL_ASSIGN
-	| DIV_ASSIGN
-	| MOD_ASSIGN
-	| ADD_ASSIGN
-	| SUB_ASSIGN
+	| MUL_ASSIGN { $$ = new ParserVal("*="); }
+	| DIV_ASSIGN { $$ = new ParserVal("/="); }
+	| MOD_ASSIGN { $$ = new ParserVal("%="); }
+	| ADD_ASSIGN { $$ = new ParserVal("+="); }
+	| SUB_ASSIGN { $$ = new ParserVal("-="); }
 	| LEFT_ASSIGN
 	| RIGHT_ASSIGN
 	| AND_ASSIGN
@@ -224,12 +241,12 @@ declaration_specifiers
 
 init_declarator_list
 	: init_declarator
-	| init_declarator_list ',' init_declarator
+	| init_declarator_list ',' init_declarator { $$ = new ParserVal($1.sval + ", " + $3.sval); }
 	;
 
 init_declarator
 	: declarator
-	| declarator '=' initializer
+	| declarator '=' initializer { $$ = new ParserVal($1.sval + " = " + $3.sval); }
 	;
 
 type_specifier
@@ -307,7 +324,7 @@ enumerator_list
 
 enumerator
 	: IDENTIFIER
-	| IDENTIFIER '=' constant_expression
+	| IDENTIFIER '=' constant_expression { $$ = new ParserVal($1.sval + " = " + $3.sval); }
 	;
 
 type_qualifier
@@ -321,12 +338,12 @@ declarator
 
 direct_declarator
 	: IDENTIFIER
-	| '(' declarator ')'
-	| direct_declarator '[' constant_expression ']'
-	| direct_declarator '[' ']'
-	| direct_declarator '(' parameter_type_list ')'
-	| direct_declarator '(' identifier_list ')'
-	| direct_declarator '(' ')'
+	| '(' declarator ')' { $$ = new ParserVal("(" + $2.sval + ")"); }
+        | direct_declarator '[' constant_expression ']' { $$ = new ParserVal($1.sval + "[" + $3.sval + "]"); }
+        | direct_declarator '[' ']' { $$ = new ParserVal($1.sval + "[]"); }
+        | direct_declarator '(' parameter_type_list ')' { $$ = new ParserVal($1.sval + "(" + $3.sval + ")"); }
+        | direct_declarator '(' identifier_list ')' { $$ = new ParserVal($1.sval + "(" + $3.sval + ")"); }
+        | direct_declarator '(' ')' { $$ = new ParserVal($1.sval + "()"); }
 	;
 
 type_qualifier_list
@@ -337,12 +354,12 @@ type_qualifier_list
 
 parameter_type_list
 	: parameter_list
-	| parameter_list ',' ELLIPSIS
+	| parameter_list ',' ELLIPSIS { $$ = new ParserVal($1.sval + "..."); }
 	;
 
 parameter_list
 	: parameter_declaration
-	| parameter_list ',' parameter_declaration
+	| parameter_list ',' parameter_declaration { $$ = new ParserVal($1.sval + ", " + $3.sval); }
 	;
 
 parameter_declaration
@@ -353,7 +370,7 @@ parameter_declaration
 
 identifier_list
 	: IDENTIFIER
-	| identifier_list ',' IDENTIFIER
+	| identifier_list ',' IDENTIFIER { $$ = new ParserVal($1.sval + ", " + $3.sval); }
 	;
 
 type_name
@@ -370,54 +387,58 @@ direct_abstract_declarator
 	| '[' ']'
 	| '[' constant_expression ']'
 	| direct_abstract_declarator '[' ']'
-	| direct_abstract_declarator '[' constant_expression ']'
+	| direct_abstract_declarator '[' constant_expression ']' { $$ = new ParserVal($1.sval + "[" + $3.sval + "]"); }
 	| '(' ')'
-	| '(' parameter_type_list ')'
-	| direct_abstract_declarator '(' ')'
-	| direct_abstract_declarator '(' parameter_type_list ')'
+	| '(' parameter_type_list ')' { $$ = new ParserVal("(" + $2.sval + ")"); }
+	| direct_abstract_declarator '(' ')' { $$ = new ParserVal($1.sval + "()"); }
+	| direct_abstract_declarator '(' parameter_type_list ')' { $$ = new ParserVal($1.sval + "(" + $3.sval + ")"); }
 	;
 
 initializer
 	: assignment_expression
-	| '{' initializer_list '}'
-	| '{' initializer_list ',' '}'
+	| '{' initializer_list '}' { $$ = new ParserVal(" { " + $2.sval +" } " ); }
+	| '{' initializer_list ',' '}' { $$ = new ParserVal(" { " + $2.sval +" } " ); }
 	;
 
 initializer_list
 	: initializer
-	| initializer_list ',' initializer
+	| initializer_list ',' initializer { $$ = new ParserVal($1.sval + ", " + $3.sval); }
 	;
 
 labeled_statement
-	: '*' IDENTIFIER
+        : '*' IDENTIFIER { $$ = new ParserVal($2.sval); }
 	;
 
 compound_statement
 	: '{' NEWLINE '}'
-	| '{' NEWLINE statement_list '}'
-	| '{' NEWLINE declaration_list '}'
-	| '{' NEWLINE declaration_list statement_list '}'
+	| '{' NEWLINE statement_list '}' { $$ = $3; }
+        | '{' NEWLINE declaration_list '}' { $$ = $3; }
+        | '{' NEWLINE declaration_list statement_list '}' { $$ = $3; }
 	;
 
 declaration_list
-	: declaration
-	| declaration_list declaration
+	: declaration { $$ = new ParserVal($1.sval + ";"); }
+	| declaration_list declaration { $$ = new ParserVal($1.sval + ";\r\n" + $2.sval); }
 	;
 
 statement_list
-	: statement
-	| statement_list statement
+        : statement { $$ = new ParserVal($1.sval + ";"); }
+        | statement_list statement { $$ = new ParserVal($1.sval + ";\r\n" + $2.sval); }
 	;
 
 expression_statement
 	: expression
-        | expression jump_statement // onerror goto *label_0241
+        | expression jump_statement { $$ = new ParserVal("if (" + $1.sval + ") { " + $2.sval + " } "); }// onerror goto *label_0241
 	;
 
 selection_statement
-	: IF '(' expression ')' statement %prec LOWER_THAN_ELSE
-	| IF '(' expression ')' statement ELSE statement
-	;
+        : IF '(' expression ')' statement %prec LOWER_THAN_ELSE {
+          $$ = new ParserVal("if (" + $3.sval + ") {\n " + $5.sval + ";\n}");
+        }
+        | IF '(' expression ')' statement ELSE statement {
+          $$ = new ParserVal("if (" + $3.sval + ") {\n " + $5.sval + ";\n}\nelse {\n " + $7.sval + ";\n}");
+        }
+        ;
 
 iteration_statement
 	: WHILE '(' expression ')' statement
@@ -427,37 +448,20 @@ iteration_statement
 	;
 
 jump_statement
-	: GOTO '*' IDENTIFIER
-        | GOTO STRING_LITERAL ',' '*' IDENTIFIER //button goto "refresh", *label_1984
-	| GOTO '*' IDENTIFIER //onerror goto *label_0241
-	| GOSUB '*' IDENTIFIER
-	| GOSUB STRING_LITERAL ',' '*' IDENTIFIER //button gosub "fill", *label_1997
+        : GOTO '*' IDENTIFIER { $$ = new ParserVal("goto_" + $3.sval + "()"); }
+        | GOTO STRING_LITERAL ',' '*' IDENTIFIER { $$ = new ParserVal("goto_button_" + $5.sval + "(" + $2.sval + ")"); } //button goto "refresh", *label_1984
+	| GOSUB '*' IDENTIFIER { $$ = new ParserVal("gosub_" + $3.sval + "()"); }
+	| GOSUB STRING_LITERAL ',' '*' IDENTIFIER { $$ = new ParserVal("gosub_button_" + $5.sval + "(" + $2.sval + ")"); } //button gosub "fill", *label_1997
 	| CONTINUE
-	| CONTINUE expression
+	| CONTINUE expression { $$ = new ParserVal("continue; //" + $2.sval); }
 	| BREAK
 	| RETURN
-	| RETURN expression
-	;
-
-translation_unit
-	: external_declaration
-	| translation_unit external_declaration
-	;
-
-external_declaration
-	: function_definition
-	| declaration
-	;
-
-function_definition
-	: declaration_specifiers declarator declaration_list compound_statement
-	| declaration_specifiers declarator compound_statement
-	| declarator declaration_list compound_statement
-	| declarator compound_statement
+	| RETURN expression { $$ = new ParserVal("return " + $2.sval); }
 	;
 
 %%
 
+        int i = 0;
 	// Referencia ao JFlex
 	private Yylex lexer;
 
@@ -480,7 +484,7 @@ function_definition
 
         // Interface com o JFlex eh criado no construtor
         public Parser(Reader r, boolean debug){
-                yydebug = debug;
+                yydebug = false;
 		lexer = new Yylex(r, this);
 	}
 
